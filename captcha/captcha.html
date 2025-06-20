@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Joel</title>
+  <title>Find the Circle</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style type="text/css">
@@ -27,24 +27,278 @@
 <body>
   <div id="captcha-container">
     <!-- Add your CAPTCHA here: -->
-    Hello world!
+    <span id="captcha-text">Click the Circle 4 time(s) to proceed.</span>
 
     <!-- We've added a sample button. Feel free to remove it: -->
-    <button id="solve">
-      Solve!
+    <button id="start">
+      Start!
     </button>
   </div>
 
   <script type="text/javascript">
-    (function(window, document){
+    (function(window, document) {
       // This is how you tell the parent window that the CAPTCHA was successful.
       function captchaSuccess() {
         window.top.postMessage("success", '*');
       }
 
-      // Your CAPTCHA code goes here, we've added a simple example below:
-      document.getElementById('solve')
-           .addEventListener('click', () => captchaSuccess());
+      // a better random function with ranges for whole numbers (https://www.w3schools.com/js/js_random.asp)
+      // min in inclusive, max is exclusive
+      function randomRange(min, max) {
+        return Math.floor(Math.random() * (max - min) + min);
+      }
+
+      // a function to randomly select an element in an array
+      function randomChoice(choices) {
+        return choices[randomRange(0, choices.length)];
+      }
+
+      // friendly messages when resetting
+      const resetMessages = [
+                             "It seems like you're really struggling. Let's try again, shall we?",
+                             "We've detected that you're having some trouble. Let's try with a new one, okay?",
+                             "We're not sure if you're human or not, but just in case, we'll try it again.",
+                             "Bot-like behavior detected. We need to reset to see if you can pass the Turing test.",
+                             "Our algorithms suggest you might be automated. Let's try this again.",
+                             "Human verification required. Please complete this challenge to prove your humanity.",
+                             "We're experiencing some technical difficulties... or are you just not a real person?"
+                            ]; 
+
+      const characterList = ["diamond", "heart", "hexagon", "oval", "pentagon"]; // names of the characters
+
+      // use the CAPTCHA dimensions as global variables
+      const containerWidth = parseInt(getComputedStyle(document.getElementById("captcha-container")).width); // width of the CAPTCHA container
+      const containerHeight = parseInt(getComputedStyle(document.getElementById("captcha-container")).height); // height of the CAPTCHA container
+
+      let difficulty = 1; // changing difficulty with attempts
+      let clicks = 0; // how many success times the user has found the circle
+      const goal = 4; // how many successes are needed to pass
+      let fails = 0; // how many times the user failed to find in time limit
+
+      // creating a class for all of the different characters
+      class CharacterObject {
+        constructor(src, x, y, v, solution) {
+          this.image = new Image();
+          this.image.src = src;
+          
+          // position of the character
+          this.image.style.position = 'absolute';
+          this.x = x;
+          this.y = y;
+          
+          // velocity and space of character
+          this.vx = v; // initial x velocity
+          this.vy = v; // initial y velocity
+          this.width = 25; // width of the image
+          this.height = 32; // height of the image
+          
+          // create a clickable wrapper element for solution
+          if (solution) {
+            this.wrapper = document.createElement('div');
+            this.wrapper.style.width = '42px'; 
+            this.wrapper.style.height = '42px'; 
+            this.wrapper.append(this.image)
+            document.getElementById('captcha-container').appendChild(this.wrapper);
+          }
+          
+          // add other unclickable characters to the CAPTCHA
+          else {
+            document.getElementById('captcha-container').appendChild(this.image);
+            this.image.style.pointerEvents = "none";
+          }
+
+          // determines if the given object should bounce or wrap around borders
+          this.wrapping = randomChoice([true, false])
+        }
+
+        // move based on current velocity
+        move() {
+          this.x += this.vx;
+          this.y += this.vy;
+        
+          // collision with the right border detected
+          if (this.x + this.width > containerWidth) {
+            if (this.wrapping) {
+              this.x = 0; // wrap around to left border
+              this.vy += randomRange(-1, 1);
+            }
+
+            else {
+              this.x = containerWidth - this.width;
+              this.vx = -(this.vx + randomRange(-1, 1)); // change direction & velocity
+            }
+          }
+
+          // collision with left border detected
+          else if (this.x < 0) { 
+            if (this.wrapping) {
+              this.x = this.containerWidth; // wrap around to the right border
+              this.vx += randomRange(-1, 1);
+            }
+            
+            else {
+              this.x = 0;
+              this.vx = -(this.vx + randomRange(-1, 1)); // change direction & velocity
+            }
+          }
+        
+          // collision with the bottom border detected
+          if (this.y + this.height > containerHeight) {
+            if (this.wrapping) {
+              this.y = this.height; // wrap to top
+              this.vx += randomRange(-1, 1);
+            }
+
+            else {
+              this.y = containerHeight - this.height;
+              this.vy = -(this.vy + randomRange(-1, 1)); // change direction & velocity
+            }
+          }
+
+          // collision with the top border detected
+          else if (this.y < 0) {
+            if (this.wrapping) {
+              this.y = this.containerHeight;
+              this.vy += randomRange(-1, 1);
+            }
+            
+            else {
+              this.y = this.height;
+              this.vy = -(this.vy + randomRange(-1, 1)); // change direction & velocity
+            }
+          }
+
+          // in case velocity is ever set to 0
+          if (this.vx == 0) {
+            this.vx = randomRange(1, 8)
+          }
+
+          if (this.y == 0) {
+            this.vy = randomRange(1, 8)
+          }
+
+          this.image.style.top = this.y + "px";
+          this.image.style.left = this.x + "px";
+        }
+      }
+
+      function startGame(difficulty) {
+        let animationSpeed = 36 / difficulty; // speed of characters updating, lower is faster
+        let totalCharacters = 10 * (difficulty+1); // total number of characters on the captcha (without the one solution)
+        const circleSpeed = [3, 5] // possible range for the solution speed
+        const shapeSpeed = [1, 10] // possible range for the other shapes
+
+        // hide the start button so it doesn't get spammed
+        document.getElementById("start").style.visibility = "hidden";
+        document.getElementById("captcha-text").textContent = "";
+
+        // intialize a single character to find
+        let color = randomRange(0, 7).toString() + "/";
+        const circle = new CharacterObject("assets/" + color + "circle.png", 
+                                           randomRange(0, containerWidth), 
+                                           randomRange(0, containerHeight), 
+                                           randomRange(circleSpeed[0], circleSpeed[1]),
+                                           true);
+                                          
+        setInterval(() => {
+          circle.move();
+        }, animationSpeed);
+
+        // initialize many of the other types of characters
+        const shapes = [];
+        for (let i = 0; i < totalCharacters; i++) {
+          let shapeName = randomChoice(characterList);
+          
+          // random colors if the difficulty is high enough
+          if (difficulty > 3) {
+            color = randomRange(0, 7).toString() + "/";
+          }
+          
+          let shapeFile = "assets/" + color + shapeName + ".png";
+          
+          const shape = new CharacterObject(shapeFile, 
+                                            randomRange(0, containerWidth), 
+                                            randomRange(0, containerHeight), 
+                                            randomRange(shapeSpeed[0], shapeSpeed[1]),
+                                            false);
+          shapes.push(shape);
+        }
+
+        // set the shapes in motion
+        setInterval(() => {
+            shapes.forEach((shape) => {
+              shape.move();
+            });
+          }, animationSpeed);
+    
+        // detect solution by clicking on the wrapper to the circle
+        circle.wrapper.addEventListener("click", () => {
+          if (clicks + 1 >= goal) {
+            captchaSuccess();
+          }
+
+          // register the click as a success (given no critical fail), clear the old timer and reset
+          else {
+            diceRoll = randomRange(1, 21);
+            if (diceRoll > 1) {
+              clicks += 1;
+            }
+            clearTimeout(captchaTimer);
+            resetGame(true);
+          }
+        });
+      }
+
+      function resetGame(success) {  
+        // tell how many the user has left
+        if (success) {
+          let count = (goal - clicks).toString();
+          document.getElementById("captcha-text").textContent = "Click the circle " + count + " time(s) to proceed.";
+
+          // cap the speed difficulty
+          if (difficulty < 4){
+            difficulty += 1;
+          }
+        }
+        
+        // display a nice failure reset message
+        else {
+          document.getElementById("captcha-text").textContent = randomChoice(resetMessages);
+          fails += 1;
+          
+          if (fails >= 10) {
+            difficulty = 2; // make it way easier if they get to 10 fails
+          }
+          
+          else if (fails >= 5) {
+              difficulty = 3; // make it easier by a notch
+          }
+        }
+      
+        // make the start button accessible again
+        document.getElementById("start").style.visibility = "visible";
+        
+        // remove all of the current game's characters
+        var characters = document.getElementById('captcha-container').getElementsByTagName('img');
+        while (characters.length > 0) {
+          characters[0].remove();
+        }
+
+        // ensure that the wrapper is removed for proper clean up
+        var wrappers = document.getElementById('captcha-container').getElementsByTagName('div');
+        while (wrappers.length > 0) {
+          wrappers[0].remove();
+        }
+      }
+
+      // when hitting start
+      document.getElementById("start").addEventListener('click', () => {
+        startGame(difficulty);
+        let timeLimit = 30000 // 30 second time limit
+      
+        // Call the reset function after time limit
+        captchaTimer = setTimeout(resetGame, timeLimit, false);
+      });
 
     })(window, document);
   </script>
