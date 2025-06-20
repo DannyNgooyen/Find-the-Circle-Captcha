@@ -243,19 +243,22 @@
         // reset if the user is click more than 4 cps in a 3 second interval (actual bot behavior)
         // this is mostly to determine mobile spam tapping
         let clickCounter = 0;
-        const timeInterval = 3; // measured in seconds
+        const timeInterval = 2; // measured in seconds
 
         setInterval(() => {
           clicksPerSecond = clickCounter / timeInterval;
           if (clicksPerSecond > 4) {
+            clickCounter = 0;
             resetGame(false, true);
           }
-          clickCounter = 0;
+          else{
+            clickCounter = 0;
+          }
         }, timeInterval*1000);
-
+        
         document.getElementById("captcha-container").addEventListener("click", () => {
           clickCounter++;
-        })
+        });
 
         // user cannot complete the final difficulty
         if (difficulty < 4) {
@@ -297,10 +300,9 @@
           
           else {
             document.getElementById("captcha-text").textContent = randomChoice(resetMessages);
+            fails += 1;
           }
-          
-          fails += 1;
-          
+              
           if (fails >= 10) {
             difficultyCap = 2; // make it way easier if they get to 10 fails
           }
@@ -313,7 +315,6 @@
           difficulty = 1;
         }
       
-        clickCounter = 0;
         clearTimeout(captchaTimer);
 
         // make the start button accessible again
