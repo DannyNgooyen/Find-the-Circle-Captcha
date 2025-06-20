@@ -246,6 +246,9 @@
 
         setInterval(() => {
           clicksPerSecond = clickCounter / timeInterval;
+
+          console.log(clicksPerSecond);
+
           if (clicksPerSecond > 5) {
             resetGame(false, true);
           }
