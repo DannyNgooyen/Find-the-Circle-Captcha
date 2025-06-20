@@ -240,16 +240,14 @@
             });
           }, animationSpeed);
     
-        // reset if the user is click more than 5 cps in a 3 second interval (actual bot behavior)
+        // reset if the user is click more than 4 cps in a 3 second interval (actual bot behavior)
+        // this is mostly to determine mobile spam tapping
         let clickCounter = 0;
         const timeInterval = 3; // measured in seconds
 
         setInterval(() => {
           clicksPerSecond = clickCounter / timeInterval;
-
-          console.log(clicksPerSecond);
-
-          if (clicksPerSecond > 5) {
+          if (clicksPerSecond > 4) {
             resetGame(false, true);
           }
           clickCounter = 0;
