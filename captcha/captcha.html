@@ -305,10 +305,12 @@
               
           if (fails >= 10) {
             difficultyCap = 2; // make it way easier if they get to 10 fails
+            document.getElementById("captcha-text").textContent = "Ok, you're REALLY struggling! We're going to dumb it down by a LOT.";
           }
           
           else if (fails >= 5) {
               difficultyCap = 3; // make it easier by a notch
+              document.getElementById("captcha-text").textContent = "Ok, you've spent a lot of time here. Let's make things a little easier.";
           }
 
           clicks = 0; // reset the clicks upon fail
